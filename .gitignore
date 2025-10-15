@@ -53,3 +53,4 @@ private.pem
 public.pem
 Get-WABAEncryption.ps1
 Set-WABAEncryption.ps1
+Set-WhatsappFlowEndpoint.ps1

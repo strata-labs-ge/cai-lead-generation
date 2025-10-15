@@ -32,6 +32,15 @@ async def wa_flow(request: Request):
         raise HTTPException(400, "Invalid JSON")
 
     req_keys = ("encrypted_flow_data","encrypted_aes_key","initial_vector")
+    import base64, logging
+    logging.warning(
+        "lens enc=%d iv_b64=%d iv_dec=%d",
+        len(body["encrypted_flow_data"]),
+        len(body["initial_vector"]),
+        len(base64.b64decode(body["initial_vector"]))
+    )
+
+
     if any(k not in body for k in req_keys):
         raise HTTPException(400, f"Missing required fields: {req_keys}")
 
