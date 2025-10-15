@@ -134,6 +134,9 @@ async def whatsapp_flow(request: Request):
             "encrypted_flow_data": enc["encrypted_flow_data"],
             "initial_vector": enc["initial_vector"]
         }
-        return JSONResponse(response_body, headers={"Content-Type": "application/json"})
+        # Base64 encode the entire response body
+        response_json = json.dumps(response_body, separators=(",", ":"))
+        response_b64 = b64e(response_json.encode("utf-8"))
+        return JSONResponse(response_b64, headers={"Content-Type": "application/json"})
     except Exception:
         return JSONResponse({"error": "encrypt_failed"}, status_code=500)
