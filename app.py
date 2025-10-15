@@ -64,7 +64,7 @@ async def whatsapp_flow(request: Request):
         data   = decrypted.get("data") or {}
 
         # Minimal router (adjust to your flow):
-        if action == "HEALTH_CHECK":
+        if action == "PING":
             response_payload = {"screen": "SUCCESS", "data": {"health": "ok"}}
         elif action == "INIT":
             response_payload = {"screen": "WELCOME_SCREEN", "data": {}}
