@@ -165,6 +165,8 @@ async def wa_flow(request: Request):
 
     try:
         body = json.loads(raw)
+        logger.info("DBG iv_b64=%s", body["initial_vector"], extra=extra)
+        logger.info("DBG key_b64=%s", body["encrypted_aes_key"], extra=extra)
     except Exception:
         logger.warning("Invalid JSON", extra=extra)
         raise HTTPException(400, "Invalid JSON")
@@ -214,4 +216,5 @@ async def wa_flow(request: Request):
     )
 
     # IMPORTANT: return plain text (no quotes, no JSON)
+    logger.info("DBG resp_b64=%s", resp_b64, extra=extra)
     return Response(content=resp_b64, media_type="text/plain")
