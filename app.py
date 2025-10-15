@@ -57,6 +57,7 @@ async def whatsapp_flow(request: Request):
 
         decrypted, aes_key, iv = decrypt_request(enc_flow, enc_key, iv_b64)
         # `decrypted` typically has: action, screen, data, flow_token, etc.
+        print(decrypted)
 
         action = (decrypted.get("action") or "").upper()
         screen = decrypted.get("screen") or "WELCOME_SCREEN"
