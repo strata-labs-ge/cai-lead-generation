@@ -48,9 +48,8 @@ Desktop.ini
 # FastAPI/UVicorn artifacts (if any)
 instance/
 
-
-private.pem
-public.pem
+# PowerShell scripts
 Get-WABAEncryption.ps1
 Set-WABAEncryption.ps1
 Set-WhatsappFlowEndpoint.ps1
+Send-WhatsappFlowMessage.ps1
