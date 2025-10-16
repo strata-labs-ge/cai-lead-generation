@@ -261,8 +261,9 @@ async def whatsapp_flow(request: Request):
             selected = (decrypted.get("data") or {}).get("vehicle_type")
             vehicle_type = selected.get("id")
             vehicle_type_title = selected.get("title")
+            next_screen = "BUDGET_RANGE_GE"
             response_payload = {
-                "screen": screen,
+                "screen": next_screen,
                 "data": {
                     "budget_ranges": [
                         {"id":"under_ten_thousand","title":"$10,000-ზე ნაკლები"},
@@ -276,8 +277,9 @@ async def whatsapp_flow(request: Request):
             selected = (decrypted.get("data") or {}).get("budget_range")
             budget_range = selected.get("id")
             budget_range_title = selected.get("title")
+            next_screen = "PRIORITY_PREFS_GE"
             response_payload = {
-                "screen": screen,
+                "screen": next_screen,
                 "data": {
                     "priority_prefs": [
                         {"id":"lowest_price","title":"დაბალი ფასი"},
