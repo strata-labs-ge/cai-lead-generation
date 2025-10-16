@@ -117,8 +117,10 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
             "action": {
                 "name": "flow",
                 "parameters": {
+                    "flow_message_version": "3",
                     "flow_id": FLOW_ID,
                     "flow_token": flow_token,
+                    "flow_cta": "Open",
                     "flow_action": "navigate",
                     "flow_action_payload": {
                         "screen": "WELCOME_SCREEN",
