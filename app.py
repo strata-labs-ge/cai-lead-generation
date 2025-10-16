@@ -226,6 +226,12 @@ async def whatsapp_flow(request: Request):
         screen = decrypted.get("screen") or "WELCOME_SCREEN"
         data   = decrypted.get("data") or {}
 
+        LANG_TO_SCREEN = {
+            "english":  "VEHICLE_INTENT_EN",
+            "georgian": "VEHICLE_INTENT_GE",
+            "russian":  "VEHICLE_INTENT_RU"
+        }
+
         if action in {"PING", "HEALTH_CHECK"}:
             response_payload = {"screen": "SUCCESS", "data": {"health": "ok"}}
         elif action == "INIT":
@@ -236,7 +242,7 @@ async def whatsapp_flow(request: Request):
             texts = LOCALIZED.get(lang, LOCALIZED["georgian"])
 
             # NOTE: ensure this screen exists in your Flow routing model
-            next_screen = "VEHICLE_INTENT"  # or "SECOND_SCREEN_EN/KA/RU" if that's what you defined
+            next_screen = LANG_TO_SCREEN.get(lang, VEHICLE_INTENT_GE)  # or "SECOND_SCREEN_EN/KA/RU" if that's what you defined
             response_payload = {
                 "screen": next_screen,
                 "data": {
