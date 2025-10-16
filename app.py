@@ -168,6 +168,7 @@ async def whatsapp_webhook_receive(request: Request):
                         print(f"[WA] from={wa_from} text={text_body}")
 
                         if isinstance(text_body, str) and text_body.strip().lower() in {"start", "/start"}:
+                            print(f"[WA] sending flow message to {wa_from}")
                             initial_data = { "footer_label": "Complete" }
                             background_tasks.add_task(send_flow_message, wa_from, initial_data)
     except Exception:
