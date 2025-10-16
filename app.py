@@ -1,6 +1,6 @@
 # main.py
-import os, json, base64, hmac, hashlib
-from fastapi import FastAPI, Request, HTTPException
+import os, json, base64, hmac, hashlib, httpx, uuid
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import PlainTextResponse, JSONResponse
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.primitives import hashes
@@ -13,6 +13,12 @@ app = FastAPI()
 PRIVATE_KEY_PEM = os.environ["PRIVATE_KEY"]             # full PEM including headers
 VERIFY_TOKEN     = os.environ.get("FB_VERIFY_TOKEN", "")  # your chosen verify token
 APP_SECRET       = os.environ.get("FB_APP_SECRET", "")    # from Meta App → Basic
+
+GRAPH_VERSION = os.environ.get("GRAPH_VERSION", "v24.0")
+GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_VERSION}"
+WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
+WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
+FLOW_ID = os.environ.get("CAI_LEAD_INTAKE_FLOW_ID")
 
 # === Helpers (Flow crypto) ===
 def b64d(s: str) -> bytes:
@@ -87,6 +93,41 @@ LOCALIZED = {
     }
 }
 
+async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
+    """
+    Sends an interactive 'flow' message to the user who typed 'start'.
+    `to_wa_id` should be the user's WhatsApp ID from the webhook (value.messages[*].from).
+    """
+    flow_token = f"start-{uuid.uuid4()}"
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_wa_id,
+        "type": "interactive",
+        "interactive": {
+            "type": "flow",
+            "header": {"type": "text", "text": "Welcome!"},
+            "body":   {"text": "Tap below to begin."},
+            "footer": {"text": "Powered by your brand"},
+            "action": {
+                "name": "flow",
+                "parameters": {
+                    "flow_id": FLOW_ID,
+                    "flow_token": flow_token,
+                    "flow_action": "navigate",
+                    "screen": "WELCOME_SCREEN",
+                    # Optional — inject defaults your screen binds via ${data.*}
+                    "data": initial_data or { "footer_label": "Complete" }
+                }
+            }
+        }
+    }
+    url = f"{GRAPH_BASE}/{WA_PHONE_NUMBER_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(url, headers=headers, json=payload)
+        r.raise_for_status()
+    return True
+
 
 # ========== WEBHOOKS (Graph API) ==========
 @app.get("/whatsapp/webhook")
@@ -122,9 +163,13 @@ async def whatsapp_webhook_receive(request: Request):
                     # Messages array when a message arrives
                     for msg in value.get("messages", []) or []:
                         wa_from = msg.get("from")
-                        text = (msg.get("text") or {}).get("body")
+                        text_body = (msg.get("text") or {}).get("body")
                         # TODO: enqueue for processing, call n8n, etc.
-                        print(f"[WA] from={wa_from} text={text}")
+                        print(f"[WA] from={wa_from} text={text_body}")
+
+                        if isinstance(text_body, str) and text_body.strip().lower() in {"start", "/start"}:
+                            initial_data = { "footer_label": "Complete" }
+                            background_tasks.add_task(send_flow_message, wa_from, initial_data)
     except Exception:
         # swallow routing errors; don’t block 200 ack
         pass
