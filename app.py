@@ -303,6 +303,9 @@ async def whatsapp_flow(request: Request):
                         {"id":"send_wa_quote","title":"WhatsApp-ში მომწერეთ"},
                         {"id":"not_now","title":"ახლა არა"}
                     ]
+                }
+            }
+            print(response_payload)
         else:
             response_payload = {"screen": screen, "data": {"error_message": "Please try again."}}
 
