@@ -293,6 +293,16 @@ async def whatsapp_flow(request: Request):
                 }
             }
             print(response_payload)
+        elif action == "NAVIGATE" and screen == "CONTACT_COLLECTION_GE":
+            next_screen = "LEAD_QUALIFICATION_GE"
+            response_payload = {
+                "screen": next_screen,
+                "data": {
+                    "opt_in": [
+                        {"id":"yes_call","title":"დიახ, დამირეკეთ"},
+                        {"id":"send_wa_quote","title":"WhatsApp-ში მომწერეთ"},
+                        {"id":"not_now","title":"ახლა არა"}
+                    ]
         else:
             response_payload = {"screen": screen, "data": {"error_message": "Please try again."}}
 
