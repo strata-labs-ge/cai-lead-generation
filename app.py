@@ -196,26 +196,12 @@ async def whatsapp_webhook_receive(request: Request, background_tasks: Backgroun
                         log.info("Inbound msg from=%s body=%r", wa_from, text_body)
                         if isinstance(text_body, str) and text_body.strip().lower() in {"start", "/start"}:
                             background_tasks.add_task(send_flow_message, wa_from, {
-                                "languages": {
-                                    "type": "array",
-                                    "items": { 
-                                        "type": "object", 
-                                        "properties": {
-                                            "id": {
-                                                "type":"string"
-                                            }, 
-                                            "title": {
-                                                "type":"string"
-                                            } 
-                                        } 
-                                    },
-                                    "__example__": [
-                                        {"id":"english","title":"English"},
-                                        {"id":"georgian","title":"ქართული"},
-                                        {"id":"russian","title":"Русский"}
-                                    ]
-                                },
-                                "footer_label": "Complete"
+                                "footer_label": "Complete",
+                                "languages": [
+                                    {"id":"english","title":"English"},
+                                    {"id":"georgian","title":"ქართული"},
+                                    {"id":"russian","title":"Русский"}
+                                ]
                             })
                             log.info("Queued Flow send for %s", wa_from)
     except Exception:
