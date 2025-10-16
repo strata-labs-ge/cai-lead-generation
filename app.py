@@ -92,9 +92,9 @@ def normalize_lang(payload_language):
     return "english"
 
 LOCALIZED = {
-    "english":  {"footer_label": "Complete",   "heading": "Welcome!",                     "body": "Thanks—your language is set to English."},
-    "georgian": {"footer_label": "დასრულება",   "heading": "კეთილი იყოს თქვენი მობრძანება!", "body": "გმადლობთ — არჩეული ენაა ქართული."},
-    "russian":  {"footer_label": "Готово",     "heading": "Добро пожаловать!",            "body": "Спасибо — выбран русский язык."}
+    "english":  {"footer_label": "Complete", "heading": "Welcome!"},
+    "georgian": {"footer_label": "დასრულება", "heading": "კეთილი იყოს თქვენი მობრძანება!",  "vehicle_types": [{"id": "sedan", "title": "სედანი"}, {"id": "suv", "title": "ჯიპი"}, {"id": "coupe_convertible", "title": "კუპე / კაბრიოლეტი"}, {"id": "pickup", "title": "პიკაპი"}, {"id": "electric_hybrid", "title": "ელექტრო / ჰიბრიდი"}]},
+    "russian":  {"footer_label": "Готово", "heading": "Добро пожаловать!"}
 }
 
 # ---------- Sender: interactive Flow CTA ----------
@@ -248,6 +248,13 @@ async def whatsapp_flow(request: Request):
                 "data": {
                     "heading": texts["heading"],
                     "body": texts["body"],
+                    "vehicle_types": [
+                        {"id": "sedan", "title": texts["vehicle_types"][0]["title"]}
+                        {"id": "suv", "title": texts["vehicle_types"][1]["title"]}
+                        {"id": "coupe_convertible", "title": texts["vehicle_types"][2]["title"]}
+                        {"id": "pickup", "title": texts["vehicle_types"][3]["title"]}
+                        {"id": "electric_hybrid", "title": texts["vehicle_types"][4]["title"]}
+                    ],
                     "footer_label": texts["footer_label"]
                 }
             }
