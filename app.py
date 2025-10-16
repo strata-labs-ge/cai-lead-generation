@@ -125,7 +125,13 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.post(url, headers=headers, json=payload)
+        if r.status_code >= 300:
+            try:
+                print("[WA SEND ERROR]", r.status_code, r.json())
+            except Exception:
+                print("[WA SEND ERROR RAW]", r.status_code, r.text)
         r.raise_for_status()
+    print("[WA SEND SUCCESS]", flow_token)
     return True
 
 
