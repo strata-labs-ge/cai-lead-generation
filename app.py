@@ -253,18 +253,6 @@ async def whatsapp_flow(request: Request):
                         {"id": "pickup", "title": texts["vehicle_types"][3]["title"]},
                         {"id": "electric_hybrid", "title": texts["vehicle_types"][4]["title"]}
                     ],
-                    "budget_ranges": [
-                        {"id":"under_ten_thousand","title":"$10,000-ზე ნაკლები"},
-                        {"id":"ten_thousand_twenty","title":"$10,000-დან $20,000-მდე"},
-                        {"id":"twenty_thousand_thirty","title":"$20,000-დან $30,000-მდე"},
-                        {"id":"over_thirty_thousand","title":"$30,000-ზე მეტი"}
-                    ],
-                    "priority_prefs": [
-                        {"id":"lowest_price","title":"დაბალი ფასი"},
-                        {"id":"fast_delivery","title":"სწრაფი მიწოდება"},
-                        {"id":"newer_model","title":"ახალი მოდელები"},
-                        {"id":"minimal_damage","title":"მინიმალური დაზიანება"}
-                    ],
                     "footer_label": texts["footer_label"]
                 }
             }
@@ -282,8 +270,7 @@ async def whatsapp_flow(request: Request):
                         {"id":"ten_thousand_twenty","title":"$10,000-დან $20,000-მდე"},
                         {"id":"twenty_thousand_thirty","title":"$20,000-დან $30,000-მდე"},
                         {"id":"over_thirty_thousand","title":"$30,000-ზე მეტი"}
-                    ],
-                    "footer_label": texts["footer_label"]
+                    ]
                 }
             }
             print(response_payload)
@@ -300,8 +287,7 @@ async def whatsapp_flow(request: Request):
                         {"id":"fast_delivery","title":"სწრაფი მიწოდება"},
                         {"id":"newer_model","title":"ახალი მოდელები"},
                         {"id":"minimal_damage","title":"მინიმალური დაზიანება"}
-                    ],
-                    "footer_label": texts["footer_label"]
+                    ]
                 }
             }
             print(response_payload)
