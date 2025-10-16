@@ -78,6 +78,7 @@ async def whatsapp_webhook_receive(request: Request):
 
     # Parse JSON AFTER signature check
     payload = json.loads(raw.decode("utf-8"))
+    print(payload)
 
     # --- Optional: route WhatsApp messages quickly (keep it FAST) ---
     # WhatsApp Cloud API typically posts: { "object":"whatsapp_business_account", "entry":[ ... ] }
@@ -118,7 +119,7 @@ async def whatsapp_flow(request: Request):
         data   = decrypted.get("data") or {}
 
         if action == "PING" or action == "HEALTH_CHECK":
-            response_payload = {"screen": "SUCCESS", "data": {"health": "ok"}}
+            response_payload = {"data": {"status": "active"}}
         elif action == "INIT":
             response_payload = {"screen": "WELCOME_SCREEN", "data": {}}
         elif action == "DATA_EXCHANGE" and screen == "WELCOME_SCREEN":
