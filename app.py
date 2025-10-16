@@ -272,7 +272,7 @@ async def whatsapp_flow(request: Request):
                     ]
                 }
             }
-        elif action == "DATA_EXCHANGE" and screen == "BUDGET_RANGE_INTENT_GE":
+        elif action == "DATA_EXCHANGE" and screen == "BUDGET_RANGE_GE":
             selected = (decrypted.get("data") or {}).get("budget_range")
             budget_range = selected.get("id")
             budget_range_title = selected.get("title")
