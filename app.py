@@ -248,10 +248,10 @@ async def whatsapp_flow(request: Request):
                 "data": {
                     "heading": texts["heading"],
                     "vehicle_types": [
-                        {"id": "sedan", "title": texts["vehicle_types"][0]["title"]}
-                        {"id": "suv", "title": texts["vehicle_types"][1]["title"]}
+                        {"id": "sedan", "title": texts["vehicle_types"][0]["title"]},
+                        {"id": "suv", "title": texts["vehicle_types"][1]["title"]},
                         {"id": "coupe_convertible", "title": texts["vehicle_types"][2]["title"]}
-                        {"id": "pickup", "title": texts["vehicle_types"][3]["title"]}
+                        {"id": "pickup", "title": texts["vehicle_types"][3]["title"]},
                         {"id": "electric_hybrid", "title": texts["vehicle_types"][4]["title"]}
                     ],
                     "footer_label": texts["footer_label"]
