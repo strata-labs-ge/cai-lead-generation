@@ -56,6 +56,38 @@ def verify_signature(app_secret: str, raw_body: bytes, header_sig: str) -> bool:
     ours_hex = hmac.new(app_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(ours_hex, their_sig_hex)
 
+def normalize_lang(payload_language):
+    """
+    Accepts either:
+    - an object: {"id":"georgian","title":"ქართული"}  (what your Flow sends)
+    - or a string id like "georgian"
+    Returns the canonical id: english|georgian|russian
+    """
+    if isinstance(payload_language, dict):
+        return (payload_language.get("id") or "").lower()
+    if isinstance(payload_language, str):
+        return payload_language.lower()
+    return "english"
+
+LOCALIZED = {
+    "english": {
+        "footer_label": "Complete",
+        "heading": "Welcome!",
+        "body":    "Thanks—your language is set to English."
+    },
+    "georgian": {
+        "footer_label": "დასრულება",
+        "heading": "კეთილი იყოს თქვენი მობრძანება!",
+        "body":    "გმადლობთ — არჩეული ენაა ქართული."
+    },
+    "russian": {
+        "footer_label": "Готово",
+        "heading": "Добро пожаловать!",
+        "body":    "Спасибо — выбран русский язык."
+    }
+}
+
+
 # ========== WEBHOOKS (Graph API) ==========
 @app.get("/whatsapp/webhook")
 async def whatsapp_webhook_verify(request: Request):
@@ -124,8 +156,19 @@ async def whatsapp_flow(request: Request):
             response_payload = {"screen": "WELCOME_SCREEN", "data": {}}
         elif action == "DATA_EXCHANGE" and screen == "WELCOME_SCREEN":
             # Example: echo selection and finish
-            print("[FLOW] data_exchange data:", data)
-            response_payload = {"screen": "SUCCESS", "data": {"ok": True}}
+
+            selected = (decrypted.get("data") or {}).get("language")
+            lang = normalize_lang(selected)
+            texts = LOCALIZED.get(lang, LOCALIZED["georgian"])
+
+            response_payload = {
+                "screen": "VEHICLE_INTENT", 
+                "data": {
+                    "heading": texts["heading"],
+                    "body": texts["body"],
+                    "footer_label": texts["footer_label"]
+                }
+            }
         else:
             response_payload = {"screen": screen, "data": {"error_message": "Please try again."}}
 
