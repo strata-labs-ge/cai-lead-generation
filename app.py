@@ -1,26 +1,40 @@
 # main.py
-import os, json, base64, hmac, hashlib, httpx, uuid
+import os, json, base64, hmac, hashlib, uuid, logging
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import PlainTextResponse, JSONResponse
+import httpx
+
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
+# ---------- Logging ----------
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("app")
+
 app = FastAPI()
 
-# === Environment ===
-PRIVATE_KEY_PEM = os.environ["PRIVATE_KEY"]             # full PEM including headers
-VERIFY_TOKEN     = os.environ.get("FB_VERIFY_TOKEN", "")  # your chosen verify token
-APP_SECRET       = os.environ.get("FB_APP_SECRET", "")    # from Meta App → Basic
+# Log every request path + status
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    log.info("-> %s %s", request.method, request.url.path)
+    resp = await call_next(request)
+    log.info("<- %s %s %s", request.method, request.url.path, resp.status_code)
+    return resp
 
-GRAPH_VERSION = os.environ.get("GRAPH_VERSION", "v24.0")
-GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_VERSION}"
-WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
-WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID")
-FLOW_ID = os.environ.get("CAI_LEAD_INTAKE_FLOW_ID")
+# ---------- Environment ----------
+PRIVATE_KEY_PEM   = os.environ["PRIVATE_KEY"]                # full PEM including headers
+VERIFY_TOKEN      = os.environ.get("FB_VERIFY_TOKEN", "")
+APP_SECRET        = os.environ.get("FB_APP_SECRET", "")
 
-# === Helpers (Flow crypto) ===
+GRAPH_VERSION     = os.environ.get("GRAPH_VERSION", "v24.0")
+GRAPH_BASE        = f"https://graph.facebook.com/{GRAPH_VERSION}"
+WHATSAPP_TOKEN    = os.environ.get("WHATSAPP_TOKEN")
+WA_PHONE_NUMBER_ID= os.environ.get("WA_PHONE_NUMBER_ID")
+FLOW_ID           = os.environ.get("CAI_LEAD_INTAKE_FLOW_ID")
+
+# ---------- Flow crypto helpers ----------
 def b64d(s: str) -> bytes:
     return base64.b64decode(s.encode("utf-8"))
 
@@ -53,22 +67,24 @@ def encrypt_response(payload: dict, aes_key: bytes, iv: bytes) -> str:
     # Return Base64 of (ciphertext + tag)
     return b64e(ct + encryptor.tag)
 
-# === Helpers (Webhooks signature) ===
+# ---------- Webhooks signature helper ----------
 def verify_signature(app_secret: str, raw_body: bytes, header_sig: str) -> bool:
     # header format: "sha256=<hex>"
-    if not header_sig or not header_sig.startswith("sha256=") or not app_secret:
+    if not app_secret:
+        log.warning("FB_APP_SECRET missing; cannot verify signature.")
+        return False
+    if not header_sig or not header_sig.startswith("sha256="):
+        log.warning("Missing/invalid X-Hub-Signature-256 header: %r", header_sig)
         return False
     their_sig_hex = header_sig.split("=", 1)[1]
     ours_hex = hmac.new(app_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(ours_hex, their_sig_hex)
+    ok = hmac.compare_digest(ours_hex, their_sig_hex)
+    if not ok:
+        log.warning("Signature mismatch. ours=%s theirs=%s", ours_hex, their_sig_hex)
+    return ok
 
+# ---------- Language helpers ----------
 def normalize_lang(payload_language):
-    """
-    Accepts either:
-    - an object: {"id":"georgian","title":"ქართული"}  (what your Flow sends)
-    - or a string id like "georgian"
-    Returns the canonical id: english|georgian|russian
-    """
     if isinstance(payload_language, dict):
         return (payload_language.get("id") or "").lower()
     if isinstance(payload_language, str):
@@ -76,28 +92,18 @@ def normalize_lang(payload_language):
     return "english"
 
 LOCALIZED = {
-    "english": {
-        "footer_label": "Complete",
-        "heading": "Welcome!",
-        "body":    "Thanks—your language is set to English."
-    },
-    "georgian": {
-        "footer_label": "დასრულება",
-        "heading": "კეთილი იყოს თქვენი მობრძანება!",
-        "body":    "გმადლობთ — არჩეული ენაა ქართული."
-    },
-    "russian": {
-        "footer_label": "Готово",
-        "heading": "Добро пожаловать!",
-        "body":    "Спасибо — выбран русский язык."
-    }
+    "english":  {"footer_label": "Complete",   "heading": "Welcome!",                     "body": "Thanks—your language is set to English."},
+    "georgian": {"footer_label": "დასრულება",   "heading": "კეთილი იყოს თქვენი მობრძანება!", "body": "გმადლობთ — არჩეული ენაა ქართული."},
+    "russian":  {"footer_label": "Готово",     "heading": "Добро пожаловать!",            "body": "Спасибо — выбран русский язык."}
 }
 
+# ---------- Sender: interactive Flow CTA ----------
 async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
-    """
-    Sends an interactive 'flow' message to the user who typed 'start'.
-    `to_wa_id` should be the user's WhatsApp ID from the webhook (value.messages[*].from).
-    """
+    if not (WHATSAPP_TOKEN and WA_PHONE_NUMBER_ID and FLOW_ID):
+        log.error("Missing env vars: WHATSAPP_TOKEN=%s PNID=%s FLOW_ID=%s",
+                  bool(WHATSAPP_TOKEN), bool(WA_PHONE_NUMBER_ID), bool(FLOW_ID))
+        return False
+
     flow_token = f"start-{uuid.uuid4()}"
     payload = {
         "messaging_product": "whatsapp",
@@ -115,8 +121,7 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
                     "flow_token": flow_token,
                     "flow_action": "navigate",
                     "screen": "WELCOME_SCREEN",
-                    # Optional — inject defaults your screen binds via ${data.*}
-                    "data": initial_data or { "footer_label": "Complete" }
+                    "data": initial_data or {"footer_label": "Complete"}
                 }
             }
         }
@@ -124,101 +129,105 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
     url = f"{GRAPH_BASE}/{WA_PHONE_NUMBER_ID}/messages"
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
 
-    print("[WA SEND PAYLOAD]", payload)
-    print("[WA SEND URL]", url)
-    print("[WA SEND HEADERS]", headers)
-    async with httpx.AsyncClient(timeout=10) as client:
-        r = await client.post(url, headers=headers, json=payload)
-        if r.status_code >= 300:
-            try:
-                print("[WA SEND ERROR]", r.status_code, r.json())
-            except Exception:
-                print("[WA SEND ERROR RAW]", r.status_code, r.text)
-        r.raise_for_status()
-    print("[WA SEND SUCCESS]", flow_token)
-    return True
+    log.info("[SEND] POST %s to=%s payload=%s", url, to_wa_id, json.dumps(payload, ensure_ascii=False))
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(url, headers=headers, json=payload)
+            ct = r.headers.get("content-type", "")
+            body = r.text if "application/json" not in ct else r.json()
+            if r.status_code >= 300:
+                log.error("[SEND ERROR] %s %s", r.status_code, body)
+            else:
+                log.info("[SEND OK] %s %s", r.status_code, body)
+            r.raise_for_status()
+        return True
+    except Exception as e:
+        log.exception("[SEND EXC] %s", e)
+        return False
 
+# ---------- Health ----------
+@app.get("/healthz")
+async def healthz():
+    log.info("Health check hit")
+    return {"ok": True}
 
-# ========== WEBHOOKS (Graph API) ==========
+# ---------- WEBHOOKS (Graph API) ----------
 @app.get("/whatsapp/webhook")
 async def whatsapp_webhook_verify(request: Request):
-    # Meta calls: ?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
     params = request.query_params
+    log.info("Webhook VERIFY params: %s", dict(params))
     mode = params.get("hub.mode")
     token = params.get("hub.verify_token")
     challenge = params.get("hub.challenge")
     if mode == "subscribe" and token and token == VERIFY_TOKEN and challenge:
         return PlainTextResponse(challenge, status_code=200)
+    log.warning("Webhook verify failed: mode=%s token_match=%s", mode, token == VERIFY_TOKEN)
     return PlainTextResponse("Forbidden", status_code=403)
 
 @app.post("/whatsapp/webhook")
-async def whatsapp_webhook_receive(request: Request):
-    # Verify X-Hub-Signature-256 against RAW body
+async def whatsapp_webhook_receive(request: Request, background_tasks: BackgroundTasks):
     raw = await request.body()
-    header_sig = request.headers.get("X-Hub-Signature-256")
-    if not verify_signature(APP_SECRET, raw, header_sig):
+    log.info("Webhook POST headers: %s", dict(request.headers))
+
+    if not verify_signature(APP_SECRET, raw, request.headers.get("X-Hub-Signature-256")):
+        # Log minimal body to avoid PII (expand if needed)
+        log.warning("Rejecting POST with invalid signature. Body len=%d", len(raw or b""))
         raise HTTPException(status_code=403, detail="Invalid signature")
 
-    # Parse JSON AFTER signature check
-    payload = json.loads(raw.decode("utf-8"))
-    print(payload)
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+        log.info("Webhook payload: %s", json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        log.exception("JSON decode failed")
+        return JSONResponse({"status": "bad json"}, status_code=400)
 
-    # --- Optional: route WhatsApp messages quickly (keep it FAST) ---
-    # WhatsApp Cloud API typically posts: { "object":"whatsapp_business_account", "entry":[ ... ] }
     try:
         if payload.get("object") == "whatsapp_business_account":
             for entry in payload.get("entry", []):
                 for change in entry.get("changes", []):
                     value = change.get("value", {})
-                    # Messages array when a message arrives
                     for msg in value.get("messages", []) or []:
                         wa_from = msg.get("from")
-                        text_body = (msg.get("text") or {}).get("body")
-                        # TODO: enqueue for processing, call n8n, etc.
-                        print(f"[WA] from={wa_from} text={text_body}")
-
+                        text_body = (msg.get("text") or {}).get("body", "")
+                        log.info("Inbound msg from=%s body=%r", wa_from, text_body)
                         if isinstance(text_body, str) and text_body.strip().lower() in {"start", "/start"}:
-                            print(f"[WA] sending flow message to {wa_from}")
-                            initial_data = { "footer_label": "Complete" }
-                            background_tasks.add_task(send_flow_message, wa_from, initial_data)
+                            background_tasks.add_task(send_flow_message, wa_from, {"footer_label": "Complete"})
+                            log.info("Queued Flow send for %s", wa_from)
     except Exception:
-        # swallow routing errors; don’t block 200 ack
-        pass
+        log.exception("Webhook routing error")
 
-    # Always ack quickly
     return JSONResponse({"status": "ok"}, status_code=200)
 
-# ========== FLOWS DATA CHANNEL ==========
+# ---------- FLOWS DATA CHANNEL ----------
 @app.post("/whatsapp/flow")
 async def whatsapp_flow(request: Request):
     try:
         body = await request.json()
-
         # Encrypted envelope
         enc_flow = body["encrypted_flow_data"]
         enc_key  = body["encrypted_aes_key"]
         iv_b64   = body["initial_vector"]
 
         decrypted, aes_key, iv = decrypt_request(enc_flow, enc_key, iv_b64)
-        print("[FLOW] decrypted:", decrypted)
+        log.info("[FLOW] decrypted: %s", json.dumps(decrypted, ensure_ascii=False))
 
         action = (decrypted.get("action") or "").upper()
         screen = decrypted.get("screen") or "WELCOME_SCREEN"
         data   = decrypted.get("data") or {}
 
-        if action == "PING" or action == "HEALTH_CHECK":
-            response_payload = {"data": {"status": "active"}}
+        if action in {"PING", "HEALTH_CHECK"}:
+            response_payload = {"screen": "SUCCESS", "data": {"health": "ok"}}
         elif action == "INIT":
-            response_payload = {"screen": "WELCOME_SCREEN", "data": {}}
+            response_payload = {"screen": "WELCOME_SCREEN", "data": {"footer_label": LOCALIZED["english"]["footer_label"]}}
         elif action == "DATA_EXCHANGE" and screen == "WELCOME_SCREEN":
-            # Example: echo selection and finish
-
             selected = (decrypted.get("data") or {}).get("language")
             lang = normalize_lang(selected)
             texts = LOCALIZED.get(lang, LOCALIZED["georgian"])
 
+            # NOTE: ensure this screen exists in your Flow routing model
+            next_screen = "VEHICLE_INTENT"  # or "SECOND_SCREEN_EN/KA/RU" if that's what you defined
             response_payload = {
-                "screen": "VEHICLE_INTENT", 
+                "screen": next_screen,
                 "data": {
                     "heading": texts["heading"],
                     "body": texts["body"],
@@ -232,5 +241,5 @@ async def whatsapp_flow(request: Request):
         return PlainTextResponse(encrypted_b64, media_type="text/plain")
 
     except Exception as e:
-        print("[FLOW] error:", e)
+        log.exception("[FLOW] error: %s", e)
         return JSONResponse({"error": "server_error"}, status_code=500)
