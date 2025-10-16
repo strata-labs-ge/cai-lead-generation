@@ -123,6 +123,10 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
     }
     url = f"{GRAPH_BASE}/{WA_PHONE_NUMBER_ID}/messages"
     headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+
+    print("[WA SEND PAYLOAD]", payload)
+    print("[WA SEND URL]", url)
+    print("[WA SEND HEADERS]", headers)
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.post(url, headers=headers, json=payload)
         if r.status_code >= 300:
