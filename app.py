@@ -28,7 +28,7 @@ PRIVATE_KEY_PEM   = os.environ["PRIVATE_KEY"]                # full PEM includin
 VERIFY_TOKEN      = os.environ.get("FB_VERIFY_TOKEN", "")
 APP_SECRET        = os.environ.get("FB_APP_SECRET", "")
 
-GRAPH_VERSION     = os.environ.get("GRAPH_VERSION", "v24.0")
+GRAPH_VERSION     = os.environ.get("GRAPH_VERSION", "v22.0")
 GRAPH_BASE        = f"https://graph.facebook.com/{GRAPH_VERSION}"
 WHATSAPP_TOKEN    = os.environ.get("WHATSAPP_TOKEN")
 WA_PHONE_NUMBER_ID= os.environ.get("WA_PHONE_NUMBER_ID")
@@ -120,8 +120,10 @@ async def send_flow_message(to_wa_id: str, initial_data: dict | None = None):
                     "flow_id": FLOW_ID,
                     "flow_token": flow_token,
                     "flow_action": "navigate",
-                    "screen": "WELCOME_SCREEN",
-                    "data": initial_data or {"footer_label": "Complete"}
+                    "flow_action_payload": {
+                        "screen": "WELCOME_SCREEN",
+                        "data": initial_data or {"footer_label": "Complete"}
+                    }
                 }
             }
         }
