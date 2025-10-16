@@ -233,7 +233,7 @@ async def whatsapp_flow(request: Request):
         }
 
         if action in {"PING", "HEALTH_CHECK"}:
-            response_payload = {"screen": "SUCCESS", "data": {"health": "ok"}}
+            response_payload = {"data": {"status": "active"}}
         elif action == "INIT":
             response_payload = {"screen": "WELCOME_SCREEN", "data": {"footer_label": LOCALIZED["english"]["footer_label"]}}
         elif action == "DATA_EXCHANGE" and screen == "WELCOME_SCREEN":
