@@ -259,8 +259,9 @@ async def whatsapp_flow(request: Request):
             print(response_payload)
         elif action == "DATA_EXCHANGE" and screen == "VEHICLE_INTENT_GE":
             selected = (decrypted.get("data") or {}).get("vehicle_type")
-            vehicle_type = selected.get("id")
-            vehicle_type_title = selected.get("title")
+            print(selected)
+            # vehicle_type = selected.get("id")
+            # vehicle_type_title = selected.get("title")
             next_screen = "BUDGET_RANGE_GE"
             response_payload = {
                 "screen": next_screen,
@@ -276,8 +277,9 @@ async def whatsapp_flow(request: Request):
             print(response_payload)
         elif action == "DATA_EXCHANGE" and screen == "BUDGET_RANGE_GE":
             selected = (decrypted.get("data") or {}).get("budget_range")
-            budget_range = selected.get("id")
-            budget_range_title = selected.get("title")
+            print(selected)
+            # budget_range = selected.get("id")
+            # budget_range_title = selected.get("title")
             next_screen = "PRIORITY_PREFS_GE"
             response_payload = {
                 "screen": next_screen,
