@@ -270,9 +270,11 @@ async def whatsapp_flow(request: Request):
                         {"id":"ten_thousand_twenty","title":"$10,000-დან $20,000-მდე"},
                         {"id":"twenty_thousand_thirty","title":"$20,000-დან $30,000-მდე"},
                         {"id":"over_thirty_thousand","title":"$30,000-ზე მეტი"}
-                    ]
+                    ],
+                    "footer_label": texts["footer_label"]
                 }
             }
+            print(response_payload)
         elif action == "DATA_EXCHANGE" and screen == "BUDGET_RANGE_GE":
             selected = (decrypted.get("data") or {}).get("budget_range")
             budget_range = selected.get("id")
@@ -286,7 +288,8 @@ async def whatsapp_flow(request: Request):
                         {"id":"fast_delivery","title":"სწრაფი მიწოდება"},
                         {"id":"newer_model","title":"ახალი მოდელები"},
                         {"id":"minimal_damage","title":"მინიმალური დაზიანება"}
-                    ]
+                    ],
+                    "footer_label": texts["footer_label"]
                 }
             }
             print(response_payload)
