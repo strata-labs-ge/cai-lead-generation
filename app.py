@@ -240,14 +240,13 @@ async def whatsapp_flow(request: Request):
             selected = (decrypted.get("data") or {}).get("language")
             lang = normalize_lang(selected)
             texts = LOCALIZED.get(lang, LOCALIZED["georgian"])
-
+            print(texts)
             # NOTE: ensure this screen exists in your Flow routing model
             next_screen = LANG_TO_SCREEN.get(lang, "VEHICLE_INTENT_GE")  # or "SECOND_SCREEN_EN/KA/RU" if that's what you defined
             response_payload = {
                 "screen": next_screen,
                 "data": {
                     "heading": texts["heading"],
-                    "body": texts["body"],
                     "vehicle_types": [
                         {"id": "sedan", "title": texts["vehicle_types"][0]["title"]}
                         {"id": "suv", "title": texts["vehicle_types"][1]["title"]}
@@ -258,6 +257,7 @@ async def whatsapp_flow(request: Request):
                     "footer_label": texts["footer_label"]
                 }
             }
+            print(response_payload)
         else:
             response_payload = {"screen": screen, "data": {"error_message": "Please try again."}}
 
