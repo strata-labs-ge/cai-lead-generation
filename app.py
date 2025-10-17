@@ -294,7 +294,7 @@ async def whatsapp_flow(request: Request):
                 }
             }
             print(response_payload)
-        elif action == "DATA_EXCHANGE" and screen == "PRIORITY_PREFS_GE":
+        elif action == "DATA_EXCHANGE" and screen == "CONTACT_COLLECTION_GE":
             next_screen = "LEAD_QUALIFICATION_GE"
             response_payload = {
                 "screen": next_screen,
