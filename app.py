@@ -226,6 +226,7 @@ async def whatsapp_flow(request: Request):
         screen = decrypted.get("screen") or "WELCOME_SCREEN"
         data   = decrypted.get("data") or {}
 
+        print(action, screen, data)
         LANG_TO_SCREEN = {
             "english":  "VEHICLE_INTENT_EN",
             "georgian": "VEHICLE_INTENT_GE",
@@ -293,7 +294,7 @@ async def whatsapp_flow(request: Request):
                 }
             }
             print(response_payload)
-        elif action == "NAVIGATE" and screen == "CONTACT_COLLECTION_GE":
+        elif action == "DATA_EXCHANGE" and screen == "PRIORITY_PREFS_GE":
             next_screen = "LEAD_QUALIFICATION_GE"
             response_payload = {
                 "screen": next_screen,
